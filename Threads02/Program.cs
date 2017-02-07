@@ -11,13 +11,12 @@ namespace Threads02 {
 
 		private static Random rnd = new Random();
 
-		private int ServeTime = rnd.Next(1000, 1500);
-		private int GrowTime = rnd.Next(500, 750);
-		private int QueEmptyWait = 1000;
+		public const int GrowTimeCeil = 750;
+		public const int GrowTimeFloor = 500;
 
-		private bool ShopsOpen = true;
+		public static int QueEmptyWait = 1000;
 
-		private Dictionary<int, int> Clerks = new Dictionary<int, int>();
+		public static bool ShopsOpen = true;
 
 		static void Main(string[] args) {
 			Program a = new Program();
@@ -26,23 +25,20 @@ namespace Threads02 {
 
 		public void Run() {
 			Thread Customers = new Thread(NewCustomer);
-			Thread Clerk0 = new Thread(ServeCustomer);
-			Thread Clerk1 = new Thread(ServeCustomer);
+			Thread Manager = new Thread(WatchQue);
 
 			Thread UI = new Thread(ConsoleUI);
 
 			UI.Start();
 			
 			Customers.Start();
-			Clerk0.Start();
-			Clerk1.Start();
+			Manager.Start();
 
 			Console.ReadLine();
 			ShopsOpen = false;
 			
 			Customers.Join();
-			Clerk0.Join();
-			Clerk1.Join();
+			Manager.Join();
 
 			UI.Abort();
 
@@ -58,8 +54,17 @@ namespace Threads02 {
 				Console.WriteLine("Currently in Que: " + que.InQue);
 				Console.WriteLine("Next Number Available: " + que.NextNumber);
 
-				foreach(KeyValuePair<int, int> Clerk in Clerks) {
-					Console.WriteLine("Clerk "+ Clerk.Key +" is currently serving " + Clerk.Value);
+				foreach(KeyValuePair<int, Clerk> Clerk in Clerk.Clerks) {
+					string Serving;
+					if(Clerk.Value.Serving == 0) {
+						Serving = "waiting...";
+					} else if(Clerk.Value.Serving < 0) {
+						Serving = "home";
+					}
+					else {
+						Serving = "serving " + Clerk.Value.Serving;
+					}
+					Console.WriteLine("Clerk "+ Clerk.Key +" is currently " + Serving);
 				}
 
 				if(!ShopsOpen) {
@@ -70,41 +75,25 @@ namespace Threads02 {
 			}
 		}
 
-		private void NewCustomer() {
-			while (ShopsOpen) {
-				int MyNumber = que.PullNumber();
-				//Console.WriteLine("The next number to be picked: " + MyNumber);
+		private void WatchQue() {
+			Clerk.CallIn();
+			Clerk.CallIn();
 
-				Thread.Sleep(GrowTime);
-			}
-		}
-
-		private void ServeCustomer() {
-			int ClerkID = RegisterClerk();
-			while (ShopsOpen || que.InQue > 0) {
-				try {
-					int Serving = que.serveNext();
-					Clerks[ClerkID] = Serving;
-					//Console.WriteLine("Now handling: " + Serving);
-					Thread.Sleep(ServeTime);
-				} catch (QueIsEmptyException) {
-					Clerks[ClerkID] = 0;
-					//Console.WriteLine("Que is empty...");
-					Thread.Sleep(QueEmptyWait);
+			while(ShopsOpen || que.InQue > 0) {
+				if(que.InQue > 5) {
+					// When que is too big add clerks...
+				}  else {
+					// else send them home...
 				}
 			}
 		}
 
-		private int RegisterClerk() {
-			int newID;
-			if (Clerks.Count == 0) {
-				newID = 0;
-			} else {
-				newID = Clerks.Keys.Last() + 1;
+		private void NewCustomer() {
+			while (ShopsOpen) {
+				int MyNumber = que.PullNumber();
+				Thread.Sleep(rnd.Next(GrowTimeFloor, GrowTimeCeil));
 			}
-						
-			Clerks.Add(newID, 0);
-			return newID;
 		}
+
 	}
 }

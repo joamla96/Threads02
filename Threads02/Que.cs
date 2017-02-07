@@ -1,4 +1,5 @@
-﻿using Threads02.Exceptions;
+﻿using System;
+using Threads02.Exceptions;
 
 namespace Threads02 {
 	class Que {
@@ -6,17 +7,24 @@ namespace Threads02 {
 		public int InQue = 0;
 		public int NextNumber = 0;
 
+		private object lockNewNumber = new object();
+		private object lockServeNext = new object();
+
 		public int PullNumber() {
-			InQue++;
-			return ++NextNumber;
+			lock (lockNewNumber) {
+				InQue++;
+				return ++NextNumber;
+			}
 		}
 
 		public int serveNext() {
-			if(this.InQue == 0) {
-				throw new QueIsEmptyException();
+			lock (lockServeNext) {
+				if (this.InQue == 0) {
+					throw new QueIsEmptyException();
+				}
+				InQue--;
+				return ++Serving;
 			}
-			InQue--;
-			return ++Serving;
 		}
 		
 	}
